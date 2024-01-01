@@ -1,37 +1,38 @@
 <template>
-  <div>
-    <svg :width="width" :height="height">
-      <g :transform="`translate(${width / 2}, ${height / 2})`">
-        <g v-for="(slice, index) in slices" :key="index">
-          <path
-            :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)"
-            :fill="slice.color"
-            @mouseover="showValues(slice.value, slice.date)"
-            @mouseout="hideValues"
-            class="chart-piece"
-          ></path>
-          <g v-if="!showHoverValues">
-            <text v-if="nameIsShort(name)" text-anchor="middle" font-size="14" dy="7">{{ name }}</text>
+  <svg  class="piechart" :width="width" :height="height">
+    <g :transform="`translate(${width / 2}, ${height / 2})`">
+      <g v-for="(slice, index) in slices" :key="index">
+        <path
+          :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)"
+          :fill="slice.color"
+          @mouseover="showValues(slice.value, slice.date)"
+          @mouseout="hideValues"
+          class="chart-piece"
+        ></path>
+        <g v-if="!showHoverValues">
+          <text v-if="nameIsShort(name)" text-anchor="middle" font-size="14" dy="7">{{ name }}</text>
 
-            <g v-if="!nameIsShort(name)">
-              <text text-anchor="middle" font-size="14" dy="-3">{{ getPart(name, 0) }}</text>
-              <text text-anchor="middle" font-size="14" dy="20">{{ getPart(name, 1) }}</text>
-            </g>
-          </g>
-          <g v-if="showHoverValues">
-            <text text-anchor="middle" font-size="15" dy="0">{{ hoverValue }}</text>
-            <text text-anchor="middle" font-size="11" dy="20">{{ hoverDate }}</text>
+          <g v-if="!nameIsShort(name)">
+            <text text-anchor="middle" font-size="14" dy="-3">{{ getPart(name, 0) }}</text>
+            <text text-anchor="middle" font-size="14" dy="20">{{ getPart(name, 1) }}</text>
           </g>
         </g>
+        <g v-if="showHoverValues">
+          <text text-anchor="middle" font-size="15" dy="0">{{ hoverValue }}</text>
+          <text text-anchor="middle" font-size="11" dy="20">{{ hoverDate }}</text>
+        </g>
       </g>
-    </svg>
-  </div>
+    </g>
+  </svg>
 </template>
 
 <script>
 export default {
   props: {
-    name: String,
+    name: {
+      type: String,
+      default: '',
+    },
     positive: {
       type: Boolean,
       default: true,
@@ -51,6 +52,10 @@ export default {
     innerRadius: {
       type: Number,
       default: 45,
+    },
+    border: {
+      type: Boolean,
+      default: false,
     },
     data: {
       type: Object,
@@ -210,10 +215,17 @@ export default {
       }
     },
   },
+  computed: {
+
+  },
 };
 </script>
 
 <style scoped>
+.piechart {
+  border: 1px solid black;
+}
+
 .chart-piece {
   transition: transform 0.2s ease-out;
 }
