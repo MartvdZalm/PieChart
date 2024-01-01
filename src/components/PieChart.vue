@@ -1,5 +1,5 @@
 <template>
-  <svg  class="piechart" :width="width" :height="height">
+  <svg class="piechart" :width="width" :height="height">
     <g :transform="`translate(${width / 2}, ${height / 2})`">
       <g v-for="(slice, index) in slices" :key="index">
         <path
@@ -13,10 +13,11 @@
           <text v-if="nameIsShort(name)" text-anchor="middle" font-size="14" dy="7">{{ name }}</text>
 
           <g v-if="!nameIsShort(name)">
-            <text text-anchor="middle" font-size="14" dy="-3">{{ getPart(name, 0) }}</text>
-            <text text-anchor="middle" font-size="14" dy="20">{{ getPart(name, 1) }}</text>
+            <g v-for="(part, index) in getParts(name)" :key="index">
+              <text text-anchor="middle" font-size="14" :dy="20 * index">{{ part }}</text>
+            </g>
           </g>
-        </g>
+        </g> 
         <g v-if="showHoverValues">
           <text text-anchor="middle" font-size="15" dy="0">{{ hoverValue }}</text>
           <text text-anchor="middle" font-size="11" dy="20">{{ hoverDate }}</text>
@@ -89,14 +90,18 @@ export default {
     createPieChart() {
       const dataValues = Object.values(this.pieData);
       const dataKeys = Object.keys(this.pieData);
-      const total = dataValues.reduce((acc, val) => acc + val, 0);
       let startAngle = 0;
 
-      this.slices = dataValues.map((value, index) => {
+      const sortedData = dataKeys.map((date, index) => ({ 
+        date, value: dataValues[index] 
+      })).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const total = sortedData.reduce((acc, { value }) => acc + value, 0);
+      this.slices = sortedData.map(({ value, date }) => {
         const slice = {
           value,
-          date: dataKeys[index],
-          color: this.getColor(dataKeys[index]),
+          date,
+          color: this.getColor(date),
           startAngle: (Math.PI * 2 * startAngle) / total,
           endAngle: (Math.PI * 2 * (startAngle + value)) / total,
         };
@@ -208,10 +213,14 @@ export default {
       }
       return true;
     },
-    getPart(str, i) {
+    getParts(str) {
       if (!this.nameIsShort(str)) {
         const words = str.split('_');
-        return words[i];
+        let parts = [];
+        for (let i = 0; i < words.length; i++) {
+          parts[i] = words[i];
+        }
+        return parts;
       }
     },
   },
