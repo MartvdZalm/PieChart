@@ -7,13 +7,51 @@
     :outerRadius="140"
     :innerRadius="70"
     :data="slices"
+    :fontSize="22"
     />
 
   <PieChart
+    name="promotion_unknown_sale_condition_s_s"
     :width="350"
     :height="350"
     :outerRadius="140"
     :innerRadius="70"
+    :data="slices"
+    :positive="false"
+    :fontSize="22"
+    />
+
+      <PieChart
+    name="promotion_unknown_sale_condition_s"
+    :width="350"
+    :height="350"
+    :outerRadius="140"
+    :innerRadius="70"
+    :data="slices"
+    :positive="false"
+    :fontSize="22"
+    />
+
+      <PieChart
+    name="promotion_unknown_sale_condition_s"
+    :width="350"
+    :height="350"
+    :outerRadius="140"
+    :innerRadius="70"
+    :data="slices"
+    :positive="false"
+    :fontSize="22"
+    />
+
+      <PieChart
+    name="promotion_unknown_sale_condition_s"
+    :width="350"
+    :height="350"
+    :outerRadius="140"
+    :innerRadius="70"
+    :data="slices"
+    :positive="false"
+    :fontSize="22"
     />
 
 </template>
@@ -29,14 +67,22 @@ export default {
   data() {
     return {
       slices: {
-        '2024-01-01': 324546,
-        '2023-12-18': 435264,
-        '2023-12-29': 413524,
-        '2023-12-12': 134524,
-        '2023-12-17': 124524,
-        '2023-12-23': 334524,
-        '2023-12-16': 354524,
-        '2023-12-14': 294524,
+        '2024-01-02': 100,
+        '2024-01-01': 100,
+        '2023-12-31': 100,
+        '2023-12-18': 100,
+        '2023-12-29': 100,
+        '2023-12-27': 100,
+        '2023-12-26': 100,
+        '2023-12-12': 100,
+        '2023-12-17': 100,
+        '2023-12-23': 100,
+        '2023-12-16': 100,
+        '2023-12-14': 100,
+        '2023-12-09': 100,
+        '2023-12-05': 100,
+        '2023-12-04': 100,
+        '2023-12-03': 100,
       },
     };
   },
