@@ -10,17 +10,20 @@
           class="chart-piece"
         ></path>
         <g v-if="!showHoverValues">
-          <text v-if="nameIsShort(name)" text-anchor="middle" font-size="14" dy="7">{{ name }}</text>
+          <text v-if="nameIsShort(name)" text-anchor="middle" :font-size="fontSize" dy="7" font-family="Arial">{{ name }}</text>
 
           <g v-if="!nameIsShort(name)">
-            <g v-for="(part, index) in getParts(name)" :key="index">
-              <text text-anchor="middle" font-size="14" :dy="20 * index">{{ part }}</text>
-            </g>
+              <text v-for="(part, index) in getParts(name)" :key="index"
+                text-anchor="middle"
+                :font-size="fontSize"
+                :dy="getDY(getParts(name).length, index)" font-family="Arial">
+                {{ part }}
+              </text>
           </g>
         </g> 
         <g v-if="showHoverValues">
-          <text text-anchor="middle" font-size="15" dy="0">{{ hoverValue }}</text>
-          <text text-anchor="middle" font-size="11" dy="20">{{ hoverDate }}</text>
+          <text text-anchor="middle" :font-size="fontSize" dy="0" font-family="Arial">{{ hoverValue }}</text>
+          <text text-anchor="middle" :font-size="fontSize" dy="20" font-family="Arial">{{ hoverDate }}</text>
         </g>
       </g>
     </g>
@@ -33,6 +36,10 @@ export default {
     name: {
       type: String,
       default: '',
+    },
+    fontSize: {
+      type: Number,
+      default: 16,
     },
     positive: {
       type: Boolean,
@@ -150,17 +157,7 @@ export default {
       return { x, y };
     },
     getColor(date) {
-      // const dataKeys = Object.keys(this.pieData);
-      // const oldestDate = new Date(Math.min(...dataKeys.map((key) => new Date(key)))).getTime();
-      // const newestDate = new Date(Math.max(...dataKeys.map((key) => new Date(key)))).getTime();
-      // const targetDate = new Date(date).getTime();
-
       const daysDifference = Math.floor((new Date() - new Date(date)) / (1000 * 60 * 60 * 24));
-
-      // const timeRange = newestDate - oldestDate;
-      // const targetTimePassed = targetDate - oldestDate;
-      // const percentagePassed = (targetTimePassed / timeRange) * 100;
-
       let lightness;
       let hue;
 
@@ -174,7 +171,7 @@ export default {
           hue = 30;
         } else {
           let value = daysDifference - 8;
-          lightness = 80 - (value * 5);
+          lightness = 70 - (value * 2.5);
           hue = 0;
         }
       } else {
@@ -187,7 +184,7 @@ export default {
           hue = 30;
         } else {
           let value = daysDifference - 8;
-          lightness = 50 - (value * 5);
+          lightness = 60 - (value * 2);
           hue = 120;
         }
       }
@@ -207,7 +204,7 @@ export default {
     },
     nameIsShort(name) {
       if (name.includes('_')) {
-        if (name.length > 12) {
+        if (name.length > (this.width / 15) - this.fontSize) {
           return false;
         }
       }
@@ -215,26 +212,47 @@ export default {
     },
     getParts(str) {
       if (!this.nameIsShort(str)) {
-        const words = str.split('_');
-        let parts = [];
-        for (let i = 0; i < words.length; i++) {
-          parts[i] = words[i];
+        const substrings = str.split('_');
+        const result = [];
+        let currentSubstring = '';
+
+        for (let i = 0; i < substrings.length; i++) {
+          const substring = substrings[i];
+
+          if (currentSubstring.length + substring.length + 1 < (this.width / 15) - (this.fontSize / 2)) {
+            if (currentSubstring !== '') {
+              currentSubstring += '_' + substring;
+            } else {
+              currentSubstring = substring;
+            }
+          } else {
+            if (currentSubstring !== '') {
+              result.push(currentSubstring);
+              currentSubstring = substring;
+            } else {
+              currentSubstring = substring;
+            }
+          }
         }
-        return parts;
+
+        if (currentSubstring !== '') {
+          result.push(currentSubstring);
+        }
+
+        return result;
       }
     },
-  },
-  computed: {
-
+    getDY(totalParts, currentIndex) {
+      const lineHeight = 20;
+      const totalHeight = totalParts * lineHeight;
+      const yOffset = (lineHeight / 2) - (totalHeight / 2) + 10;
+      return yOffset + currentIndex * lineHeight;
+    },
   },
 };
 </script>
 
 <style scoped>
-.piechart {
-  border: 1px solid black;
-}
-
 .chart-piece {
   transition: transform 0.2s ease-out;
 }
