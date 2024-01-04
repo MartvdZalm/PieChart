@@ -13,7 +13,8 @@
           <text v-if="nameIsShort(name)" text-anchor="middle" :font-size="fontSize" dy="7" font-family="Arial">{{ name }}</text>
 
           <g v-if="!nameIsShort(name)">
-              <text v-for="(part, index) in getParts(name)" :key="index"
+              <text v-for="(part, index) in getParts(name)"
+                :key="index"
                 text-anchor="middle"
                 :font-size="fontSize"
                 :dy="getDY(getParts(name).length, index)" font-family="Arial">
@@ -90,7 +91,12 @@ export default {
       if (!this.data || Object.keys(this.data).length === 0) {
         this.pieData = { '0000-00-00': 1 };
       } else {
-        this.pieData = { ...this.data };
+        const keys = Object.values(this.data).every((value) => value === 0);
+        if (keys) {
+          this.pieData = { '0000-00-00': 1 };
+        } else {
+          this.pieData = { ...this.data };
+        }
       }
       this.createPieChart();
     },
@@ -195,7 +201,12 @@ export default {
       this.showHoverValues = true;
       this.hoverValue = value;
       const newDate = new Date(date);
-      this.hoverDate = `${newDate.getFullYear()}/${(newDate.getMonth() + 1)}/${newDate.getDate()}`;
+
+      if (!isNaN(newDate.getTime())) {
+        this.hoverDate = `${newDate.getFullYear()}/${newDate.getMonth() + 1}/${newDate.getDate()}`;
+      } else {
+        this.hoverDate = '0000-00-00';
+      }
     },
     hideValues() {
       this.showHoverValues = false;
@@ -221,7 +232,7 @@ export default {
 
           if (currentSubstring.length + substring.length + 1 < (this.width / 15) - (this.fontSize / 2)) {
             if (currentSubstring !== '') {
-              currentSubstring += '_' + substring;
+              currentSubstring += `_${substring}`;
             } else {
               currentSubstring = substring;
             }
@@ -241,6 +252,7 @@ export default {
 
         return result;
       }
+      return [];
     },
     getDY(totalParts, currentIndex) {
       const lineHeight = 20;
