@@ -42,6 +42,8 @@
 </template>
 
 <script>
+import { scaleLinear } from 'd3-scale';
+
 export default {
   props: {
     name: {
@@ -105,111 +107,85 @@ export default {
       handler() {
         this.updatePieChart();
       },
-      immediate: true // This ensures the watcher is triggered immediately upon component creation
-    }
+    },
   },
   methods: {
     updatePieChart() {
-      const dataValues = Object.values(this.validatedData);
-      const dataKeys = Object.keys(this.validatedData);
-      let startAngle = 0;
+      const data = this.array(this.sortedData());
+      const total = data.reduce((total, { value }) => total + value, 0);
 
-      const sortedData = dataKeys.map((date, index) => ({
-        date, value: dataValues[index],
-      })).sort((a, b) => new Date(b.date) - new Date(a.date));
+      this.slices = data.map((item, index) => {
+        const startAngle = this.calculateStartAngle(data, index, total);
+        const endAngle = this.calculateEndAngle(data, index, total);
 
-      const total = sortedData.reduce((acc, { value }) => acc + value, 0);
-      this.slices = sortedData.map(({ value, date }) => {
-        const slice = {
-          value,
-          date,
-          color: this.getColor(date),
-          startAngle: this.round((Math.PI * 2 * startAngle) / total),
-          endAngle: this.round((Math.PI * 2 * (startAngle + value)) / total),
+        return {
+          value: item.value,
+          date: item.date,
+          color: this.getMappedColorForDays(item.date),
+          startAngle,
+          endAngle,
         };
-        startAngle += value;
-        return slice;
       });
     },
-    round(value) {
+    sortedData() {
+      return Object.entries(this.validatedData)
+        .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+        .map(([date, value]) => ({ date, value }));
+    },
+    calculateStartAngle(data, index, total) {
+      if (index === 0) return 0;
+      return this.roundf((Math.PI * 2 * data.slice(0, index).reduce((acc, { value }) => acc + value, 0)) / total);
+    },
+    calculateEndAngle(data, index, total) {
+      return this.roundf((Math.PI * 2 * (data.slice(0, index + 1).reduce((acc, { value }) => acc + value, 0))) / total);
+    },
+    array(data) {
+      if (Array.isArray(data)) {
+        return data;
+      } else {
+        console.error("Data is not an array:", data);
+        return [];
+      }
+    },
+    roundf(value) {
       return Math.round(value * 1e3) / 1e3;
     },
     createArc(outerRadius, innerRadius, startAngle, endAngle) {
-      const startOuter = this.calculate(outerRadius, endAngle);
-      const endOuter = this.calculate(outerRadius, startAngle);
-      const startInner = this.calculate(innerRadius, endAngle);
-      const endInner = this.calculate(innerRadius, startAngle);
+      const startOuter = this.calculatePoint(outerRadius, endAngle);
+      const endOuter = this.calculatePoint(outerRadius, startAngle);
+      const startInner = this.calculatePoint(innerRadius, endAngle);
+      const endInner = this.calculatePoint(innerRadius, startAngle);
       const largeArcFlag = endAngle - startAngle <= Math.PI ? '0' : '1';
 
-      const d = [
-        'M',
-        startOuter.x,
-        startOuter.y,
-        'A',
-        outerRadius,
-        outerRadius,
-        0,
-        largeArcFlag,
-        0,
-        endOuter.x,
-        endOuter.y,
-        'L',
-        endInner.x,
-        endInner.y,
-        'A',
-        innerRadius,
-        innerRadius,
-        0,
-        largeArcFlag,
-        1,
-        startInner.x,
-        startInner.y,
-        'Z',
-      ].join(' ');
-
+      const d = `
+        M ${startOuter.x} ${startOuter.y}
+        A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 0 ${endOuter.x} ${endOuter.y}
+        L ${endInner.x} ${endInner.y}
+        A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 1 ${startInner.x} ${startInner.y}
+        Z,
+      `;
       return d;
     },
-    calculate(radius, angleInRadians) {
+    calculatePoint(radius, angleInRadians) {
       const x = radius * Math.cos(angleInRadians);
       const y = radius * Math.sin(angleInRadians);
       return { x, y };
     },
-    getColor(date) {
+    getMappedColorForDays(date) {
       const daysDifference = Math.floor((new Date() - new Date(date)) / (1000 * 60 * 60 * 24));
-      let lightness;
-      let hue;
 
+      let colorScale;
       if (this.positive) {
-        if (daysDifference <= 2) {
-          lightness = 50 - (daysDifference * 5);
-          hue = 120;
-        } else if (daysDifference >= 3 && daysDifference <= 7) {
-          const value = daysDifference - 3;
-          lightness = 70 - (value * 5);
-          hue = 30;
-        } else {
-          const value = daysDifference - 8;
-          lightness = 70 - (value * 2.5);
-          hue = 0;
-        }
+        colorScale = scaleLinear()
+          .domain([0, 10, 14])
+          .range(['green', 'orange', 'red']);
+      } else {
+         colorScale = scaleLinear()
+          .domain([0, 10, 14])
+          .range(['red', 'orange', 'green']);
       }
 
-      if (!this.positive) {
-        if (daysDifference <= 2) {
-          lightness = 70 - (daysDifference * 5);
-          hue = 0;
-        } else if (daysDifference >= 3 && daysDifference <= 7) {
-          const value = daysDifference - 3;
-          lightness = 70 - (value * 5);
-          hue = 30;
-        } else {
-          const value = daysDifference - 8;
-          lightness = 50 - (value * 2);
-          hue = 120;
-        }
-      }
-
-      return `hsl(${hue}, 100%, ${lightness}%)`;
+      return colorScale(daysDifference);
     },
     showValues(value, date) {
       this.showHoverValues = true;
