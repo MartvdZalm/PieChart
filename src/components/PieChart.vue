@@ -2,30 +2,40 @@
   <svg class="piechart" :width="width" :height="height">
     <g :transform="`translate(${width / 2}, ${height / 2})`">
       <g v-for="(slice, index) in slices" :key="index">
-        <path
-          :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)"
-          :fill="slice.color"
+        <g class="piece"
           @mouseover="showValues(slice.value, slice.date)"
-          @mouseout="hideValues"
-          class="chart-piece"
-        ></path>
-        <g v-if="!showHoverValues">
-          <text v-if="nameIsShort(name)" text-anchor="middle" :font-size="fontSize" dy="7" font-family="Arial">{{ name }}</text>
+          @mouseout="hideValues">
 
-          <g v-if="!nameIsShort(name)">
-              <text v-for="(part, index) in getParts(name)"
-                :key="index"
-                text-anchor="middle"
-                :font-size="fontSize"
-                :dy="getDY(getParts(name).length, index)" font-family="Arial">
-                {{ part }}
-              </text>
-          </g>
-        </g> 
-        <g v-if="showHoverValues">
-          <text text-anchor="middle" :font-size="fontSize" dy="0" font-family="Arial">{{ hoverValue }}</text>
-          <text text-anchor="middle" :font-size="fontSize" dy="20" font-family="Arial">{{ hoverDate }}</text>
+          <path
+            :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)"
+            :fill="slice.color"
+            class="hover-piece"
+          ></path>
+
+          <path
+            :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)"
+            :fill="slice.color"
+          ></path>
         </g>
+      </g>
+
+      <g v-if="!showHoverValues">
+        <text v-if="nameIsShort(name)" text-anchor="middle" :font-size="fontSize" dy="7" font-family="Arial">{{ name }}</text>
+
+        <g v-if="!nameIsShort(name)">
+            <text v-for="(part, index) in getParts(name)"
+              :key="index"
+              text-anchor="middle"
+              :font-size="fontSize"
+              :dy="getDY(getParts(name).length, index)" font-family="Arial">
+              {{ part }}
+            </text>
+        </g>
+      </g>
+
+      <g v-if="showHoverValues">
+        <text text-anchor="middle" :font-size="fontSize" dy="0" font-family="Arial">{{ hoverValue }}</text>
+        <text text-anchor="middle" :font-size="fontSize" dy="20" font-family="Arial">{{ hoverDate }}</text>
       </g>
     </g>
   </svg>
@@ -62,10 +72,6 @@ export default {
       type: Number,
       default: 45,
     },
-    border: {
-      type: Boolean,
-      default: false,
-    },
     data: {
       type: Object,
       required: false,
@@ -76,37 +82,40 @@ export default {
   },
   data() {
     return {
-      pieData: {},
       slices: [],
       showHoverValues: false,
       hoverValue: '',
       hoverDate: '',
     };
   },
+  computed: {
+    validatedData() {
+      if (!this.data || Object.keys(this.data).length === 0 || Object.values(this.data).every(value => value === 0)) {
+        return { '0000-00-00': 1 };
+      } else {
+        return { ...this.data };
+      }
+    },
+  },
   mounted() {
-    this.checkData();
+    this.updatePieChart();
+  },
+  watch: {
+    validatedData: {
+      handler() {
+        this.updatePieChart();
+      },
+      immediate: true // This ensures the watcher is triggered immediately upon component creation
+    }
   },
   methods: {
-    checkData() {
-      if (!this.data || Object.keys(this.data).length === 0) {
-        this.pieData = { '0000-00-00': 1 };
-      } else {
-        const keys = Object.values(this.data).every((value) => value === 0);
-        if (keys) {
-          this.pieData = { '0000-00-00': 1 };
-        } else {
-          this.pieData = { ...this.data };
-        }
-      }
-      this.createPieChart();
-    },
-    createPieChart() {
-      const dataValues = Object.values(this.pieData);
-      const dataKeys = Object.keys(this.pieData);
+    updatePieChart() {
+      const dataValues = Object.values(this.validatedData);
+      const dataKeys = Object.keys(this.validatedData);
       let startAngle = 0;
 
-      const sortedData = dataKeys.map((date, index) => ({ 
-        date, value: dataValues[index] 
+      const sortedData = dataKeys.map((date, index) => ({
+        date, value: dataValues[index],
       })).sort((a, b) => new Date(b.date) - new Date(a.date));
 
       const total = sortedData.reduce((acc, { value }) => acc + value, 0);
@@ -115,12 +124,15 @@ export default {
           value,
           date,
           color: this.getColor(date),
-          startAngle: (Math.PI * 2 * startAngle) / total,
-          endAngle: (Math.PI * 2 * (startAngle + value)) / total,
+          startAngle: this.round((Math.PI * 2 * startAngle) / total),
+          endAngle: this.round((Math.PI * 2 * (startAngle + value)) / total),
         };
         startAngle += value;
         return slice;
       });
+    },
+    round(value) {
+      return Math.round(value * 1e3) / 1e3;
     },
     createArc(outerRadius, innerRadius, startAngle, endAngle) {
       const startOuter = this.calculate(outerRadius, endAngle);
@@ -172,25 +184,27 @@ export default {
           lightness = 50 - (daysDifference * 5);
           hue = 120;
         } else if (daysDifference >= 3 && daysDifference <= 7) {
-          let value = daysDifference - 3;
+          const value = daysDifference - 3;
           lightness = 70 - (value * 5);
           hue = 30;
         } else {
-          let value = daysDifference - 8;
+          const value = daysDifference - 8;
           lightness = 70 - (value * 2.5);
           hue = 0;
         }
-      } else {
+      }
+
+      if (!this.positive) {
         if (daysDifference <= 2) {
           lightness = 70 - (daysDifference * 5);
           hue = 0;
         } else if (daysDifference >= 3 && daysDifference <= 7) {
-          let value = daysDifference - 3;
+          const value = daysDifference - 3;
           lightness = 70 - (value * 5);
           hue = 30;
         } else {
-          let value = daysDifference - 8;
-          lightness = 60 - (value * 2);
+          const value = daysDifference - 8;
+          lightness = 50 - (value * 2);
           hue = 120;
         }
       }
@@ -202,7 +216,7 @@ export default {
       this.hoverValue = value;
       const newDate = new Date(date);
 
-      if (!isNaN(newDate.getTime())) {
+      if (!Number.isNaN(newDate.getTime())) {
         this.hoverDate = `${newDate.getFullYear()}/${newDate.getMonth() + 1}/${newDate.getDate()}`;
       } else {
         this.hoverDate = '0000-00-00';
@@ -229,14 +243,15 @@ export default {
 
         for (let i = 0; i < substrings.length; i++) {
           const substring = substrings[i];
-
-          if (currentSubstring.length + substring.length + 1 < (this.width / 15) - (this.fontSize / 2)) {
+          const isShortText = currentSubstring.length + substring.length + 1 < (this.width / 15) - (this.fontSize / 2);
+          if (isShortText) {
             if (currentSubstring !== '') {
               currentSubstring += `_${substring}`;
             } else {
               currentSubstring = substring;
             }
-          } else {
+          }
+          if (!isShortText) {
             if (currentSubstring !== '') {
               result.push(currentSubstring);
               currentSubstring = substring;
@@ -265,11 +280,11 @@ export default {
 </script>
 
 <style scoped>
-.chart-piece {
+.hover-piece {
   transition: transform 0.2s ease-out;
 }
 
-.chart-piece:hover {
-  transform: scale(1.05);
+.piece:hover .hover-piece {
+  transform: scale(1.07);
 }
 </style>
