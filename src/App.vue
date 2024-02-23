@@ -1,15 +1,16 @@
 <template>
-
-  <PieChart
-    name="Brands"
-    :width="350"
-    :height="350"
-    :outerRadius="140"
-    :innerRadius="70"
-    :data="slices"
-    :fontSize="25"
+  <div>
+    <PieChart
+      title="PieChart"
+      :width="350"
+      :height="350"
+      :outerRadius="140"
+      :innerRadius="70"
+      :data="slices"
     />
 
+    <button @click="updateData">Update Data</button>
+  </div>
 </template>
 
 <script>
@@ -43,26 +44,16 @@ export default {
         '2024-02-05': 100,
         '2024-02-04': 100,
         '2024-02-03': 100,
-        '2024-02-02': 100,
-        '2024-02-01': 100,
-        '2024-01-31': 100,
-        '2024-01-30': 100,
-        '2024-01-29': 100,
-        '2024-01-28': 100,
-        '2024-01-27': 100,
-        '2024-01-26': 100,
-        '2024-01-25': 100,
-        '2024-01-24': 100,
-        '2024-01-23': 100,
-        '2024-01-22': 100,
-        '2024-01-21': 100,
-        '2024-01-20': 100,
       },
     };
   },
+  methods: {
+    updateData() {
+      // Example: Randomize data values
+      Object.keys(this.slices).forEach(date => {
+        this.slices[date] = Math.floor(Math.random() * 100) + 1;
+      });
+    }
+  }
 }
 </script>
-
-<style>
-
-</style>
