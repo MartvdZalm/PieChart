@@ -1,41 +1,20 @@
 <template>
   <svg class="piechart" :width="width" :height="height">
     <g :transform="`translate(${width / 2}, ${height / 2})`">
-      <g v-for="(slice, index) in slices" :key="index">
-        <g class="piece"
-          @mouseover="showValues(slice.value, slice.date)"
-          @mouseout="hideValues">
-
-          <path
-            :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)"
-            :fill="slice.color"
-            class="hover-piece"
-          ></path>
-
-          <path
-            :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)"
-            :fill="slice.color"
-          ></path>
-        </g>
+      <!-- Draw slices -->
+      <g v-for="(slice, index) in slices" :key="index" class="piece" @mouseover="showValues(slice.value, slice.date)" @mouseout="hideValues">
+        <path :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)" :fill="slice.color" class="hover-piece"></path>
       </g>
 
-      <g v-if="!showHoverValues">
-        <text v-if="nameIsShort(name)" text-anchor="middle" :font-size="fontSize" dy="7" font-family="Arial">{{ name }}</text>
-
-        <g v-if="!nameIsShort(name)">
-            <text v-for="(part, index) in getParts(name)"
-              :key="index"
-              text-anchor="middle"
-              :font-size="fontSize"
-              :dy="getDY(getParts(name).length, index)" font-family="Arial">
-              {{ part }}
-            </text>
-        </g>
-      </g>
-
+      <!-- Show hover values -->
       <g v-if="showHoverValues">
-        <text text-anchor="middle" :font-size="fontSize" dy="0" font-family="Arial">{{ hoverValue }}</text>
-        <text text-anchor="middle" :font-size="fontSize" dy="20" font-family="Arial">{{ hoverDate }}</text>
+        <text text-anchor="middle" :style="font" dy="0">{{ hoverValue }}</text>
+        <text text-anchor="middle" :style="font" dy="22">{{ hoverDate }}</text>
+      </g>
+
+      <!-- Show name -->
+      <g v-else>
+        <text text-anchor="middle" :style="font" :dy="getTextHeight()">{{ title }}</text>
       </g>
     </g>
   </svg>
@@ -46,17 +25,18 @@ import { scaleLinear } from 'd3-scale';
 
 export default {
   props: {
-    name: {
+    title: {
       type: String,
       default: '',
     },
-    fontSize: {
-      type: Number,
-      default: 16,
-    },
-    positive: {
-      type: Boolean,
-      default: true,
+    font: {
+      type: Object,
+      default: () => ({
+        fontFamily: 'Arial',
+        fontSize: '27px',
+        fontWeight: 'bold',
+        fill: '#000000',
+      }),
     },
     width: {
       type: Number,
@@ -77,9 +57,11 @@ export default {
     data: {
       type: Object,
       required: false,
-      default: () => ({
-        '0000-00-00': 1,
-      }),
+      default: () => ({'0000-00-00': 1}),
+    },
+    sliceColors: {
+      type: Array,
+      default: () => ['green', 'orange', 'red'],
     },
   },
   data() {
@@ -157,13 +139,12 @@ export default {
       const endInner = this.calculatePoint(innerRadius, startAngle);
       const largeArcFlag = endAngle - startAngle <= Math.PI ? '0' : '1';
 
-      const d = `
-        M ${startOuter.x} ${startOuter.y}
-        A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 0 ${endOuter.x} ${endOuter.y}
-        L ${endInner.x} ${endInner.y}
-        A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 1 ${startInner.x} ${startInner.y}
-        Z,
-      `;
+      const d = `M ${startOuter.x} ${startOuter.y} 
+                 A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 0 ${endOuter.x} ${endOuter.y} 
+                 L ${endInner.x} ${endInner.y} 
+                 A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 1 ${startInner.x} ${startInner.y} 
+                 Z`;
+
       return d;
     },
     calculatePoint(radius, angleInRadians) {
@@ -174,16 +155,9 @@ export default {
     getMappedColorForDays(date) {
       const daysDifference = Math.floor((new Date() - new Date(date)) / (1000 * 60 * 60 * 24));
 
-      let colorScale;
-      if (this.positive) {
-        colorScale = scaleLinear()
-          .domain([0, 10, 14])
-          .range(['green', 'orange', 'red']);
-      } else {
-         colorScale = scaleLinear()
-          .domain([0, 10, 14])
-          .range(['red', 'orange', 'green']);
-      }
+      const colorScale = scaleLinear()
+          .domain([0, 10, 20])
+          .range(this.sliceColors);
 
       return colorScale(daysDifference);
     },
@@ -191,65 +165,18 @@ export default {
       this.showHoverValues = true;
       this.hoverValue = value;
       const newDate = new Date(date);
-
-      if (!Number.isNaN(newDate.getTime())) {
-        this.hoverDate = `${newDate.getFullYear()}/${newDate.getMonth() + 1}/${newDate.getDate()}`;
-      } else {
-        this.hoverDate = '0000-00-00';
-      }
+      this.hoverDate = !Number.isNaN(newDate.getTime()) ? `${newDate.getFullYear()}/${newDate.getMonth() + 1}/${newDate.getDate()}` : '0000-00-00';
     },
     hideValues() {
       this.showHoverValues = false;
       this.hoverValue = '';
       this.hoverDate = '';
     },
-    nameIsShort(name) {
-      if (name.includes('_')) {
-        if (name.length > (this.width / 15) - this.fontSize) {
-          return false;
-        }
-      }
-      return true;
-    },
-    getParts(str) {
-      if (!this.nameIsShort(str)) {
-        const substrings = str.split('_');
-        const result = [];
-        let currentSubstring = '';
-
-        for (let i = 0; i < substrings.length; i++) {
-          const substring = substrings[i];
-          const isShortText = currentSubstring.length + substring.length + 1 < (this.width / 15) - (this.fontSize / 2);
-          if (isShortText) {
-            if (currentSubstring !== '') {
-              currentSubstring += `_${substring}`;
-            } else {
-              currentSubstring = substring;
-            }
-          }
-          if (!isShortText) {
-            if (currentSubstring !== '') {
-              result.push(currentSubstring);
-              currentSubstring = substring;
-            } else {
-              currentSubstring = substring;
-            }
-          }
-        }
-
-        if (currentSubstring !== '') {
-          result.push(currentSubstring);
-        }
-
-        return result;
-      }
-      return [];
-    },
-    getDY(totalParts, currentIndex) {
-      const lineHeight = 20;
-      const totalHeight = totalParts * lineHeight;
-      const yOffset = (lineHeight / 2) - (totalHeight / 2) + 10;
-      return yOffset + currentIndex * lineHeight;
+    getTextHeight() {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      context.font = `${this.font.fontWeight} ${this.font.fontSize} ${this.font.fontFamily}`;
+      return context.measureText('a').actualBoundingBoxAscent;
     },
   },
 };
