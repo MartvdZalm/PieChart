@@ -3,6 +3,7 @@
     <g :transform="`translate(${width / 2}, ${height / 2})`">
       <!-- Draw slices -->
       <g v-for="(slice, index) in slices" :key="index" class="piece" @mouseover="showValues(slice.value, slice.date)" @mouseout="hideValues">
+        <path :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)" :fill="slice.color"></path>
         <path :d="createArc(outerRadius, innerRadius, slice.startAngle, slice.endAngle)" :fill="slice.color" class="hover-piece"></path>
       </g>
 
